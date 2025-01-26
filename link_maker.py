@@ -6,10 +6,10 @@ def breaking_date(date_str):
 def making_link(day_from, day_to, cpv):
 
     # converting today time to format used in eZam service
-    df_y, df_m, df_d = breaking_date(day_from)
+    df_d, df_m, df_y = breaking_date(day_from)
 
     # converting time a week ago to format used in eZam service
-    dt_y, dt_m, dt_d = breaking_date(day_to)
+    dt_d, dt_m, dt_y = breaking_date(day_to)
 
     starting = df_y + "-" + df_m + "-" + df_d + "T00:00:00"
     ending = dt_y + "-" + dt_m + "-" + dt_d + "T23:59:59"
