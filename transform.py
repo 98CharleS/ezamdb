@@ -3,8 +3,15 @@ from datetime import datetime
 
 tenders = []
 
+formats = [
+    "%Y-%m-%dT%H:%M:%S.%f",
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%d"
+]
 
-def appending_deals(database):
+
+def appending_deals(database, id_n=1):
+    # id_n for numering tenders
     # changing raw data to json type
     if database:
         database = database.json()
@@ -13,7 +20,16 @@ def appending_deals(database):
             publication_time = deal.get("publicationDate")
 
             # Parse the timestamp
-            dt = datetime.strptime(publication_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+            for fmt in formats:
+                try:
+                    dt = datetime.strptime(publication_time.rstrip("Z"), fmt)
+                    break
+                except ValueError:
+                    dt = None
+
+            if dt is None:
+                print(f"Unrecognized date format: {publication_time}")
+                return None
 
             # Extract date and time
             publication_date = dt.strftime("%Y-%m-%d")
@@ -21,14 +37,13 @@ def appending_deals(database):
 
             return {
                 "id": x,
+                "ObjectId": deal.get("objectId"),
                 "orderObject": deal.get("orderObject"),
                 "orderType": deal.get("orderType"),
                 "publicationDate": publication_date,
                 "publicationHour": publication_hour,
                 "Result": deal.get("procedureResult"),
             }
-
-        id_n = 1  # number for numering tenders
 
         for deal in database:  # making a list of deals then return info
             tenders.append(getting_deals(id_n))
