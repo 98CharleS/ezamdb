@@ -13,6 +13,13 @@ from datetime import datetime
 # formatting data
 
 
+def making_dataframe(dataframe):
+    try:
+        x = pd.DataFrame(dataframe)
+        return x
+    except ValueError:
+        return None
+
 def making_link(day_from: datetime, day_to: datetime, cpv, last_id=None):
     # Format datetimes directly into the API format
     starting = day_from.strftime("%Y-%m-%dT00:00:00")
@@ -38,7 +45,8 @@ def making_link(day_from: datetime, day_to: datetime, cpv, last_id=None):
         link = ("https://ezamowienia.gov.pl/mo-board/api/v1/notice?NoticeType=ContractNotice&TenderType=1.1.1&"
                 + "&PublicationDateFrom="
                 + starting + "&PublicationDateTo="
-                + ending + "&PageSize=500")
+                + ending + "&PageSize=500"
+                + search_after_addition)
         return link
 
 
@@ -50,9 +58,9 @@ def taking_data():
     return sday, lday, cpvs
 
 
-date1 = "01.01.2023"  # for future adjustment make it entered by user
-date2 = "02.05.2023"
-cpv = "44212200-1" # 44212200-1 / all
+date1 = "03.02.2024"  # for future adjustment make it entered by user
+date2 = "05.02.2024"
+cpv = "all"  # 44212200-1 / all
 
 
 def main(start_day_str, end_day_str, code):
@@ -64,37 +72,68 @@ def main(start_day_str, end_day_str, code):
         start_date = transforming_to_datetime(start_day_str)
         end_date = transforming_to_datetime(end_day_str)
 
-        db = []
-
         # first run:
-        print(start_date, end_date, code)
-        link = making_link(start_date, end_date, code)
+        print("first connection")
+        print(start_date, end_date, code)  # printing input config
+        link = making_link(start_date, end_date, code)  # making link to connect DB
         print(link)
-        db = appending_deals(extract(link))
+        db = appending_deals(extract(link))  # extracting data from eZam DB and appending it into list
 
         # dodging empty db
         if db:
+            print("first df")
             # Create a DataFrame
-            df = pd.DataFrame(db)
-            # Convert publicationDate to datetime
-            df['publicationDate'] = pd.to_datetime(df['publicationDate'])
-            df.to_csv('output.csv', index=False, sep=";") # in Europe here so ";" instead of ","
+            df = making_dataframe(db)  # creating dataframe with pandas to read data from web
+
+            # picking last num from downloaded data and last id of tender to get next page of data from this tender
             last_obj_id = df['ObjectId'].iloc[-1]
             last_num = df['id'].iloc[-1]
             print(last_obj_id, last_num)
 
-            # LOOP TO DO
+            while True:
+                # loop which will go on as long as downloaded list of data is not empty
+                # used to get all pages form eZam DB
+                print("entering loop")
 
-            """while db:
+                # making link to connect to eZam BD and download data after last_obj_id
                 link = making_link(start_date, end_date, code, last_obj_id)
-                db = appending_deals(extract(link))
+                print(link)
+
+                db = appending_deals(extract(link), last_num)  # extracting data from eZam DB and appending it into list
+
+                print("next df")
                 # Create a DataFrame
-                df = pd.DataFrame(db)
-                # Convert publicationDate to datetime
-                df['publicationDate'] = pd.to_datetime(df['publicationDate'])
-                df.to_csv('output.csv', index=False, sep=";")  # in Europe here so ";" instead of ","
-                last_obj_id = df['ObjectId'].iloc[-1]
-                last_num = df['id'].iloc[-1]"""
+                df = making_dataframe(db)  # creating dataframe with pandas to read data from web
+
+                # picking last num from downloaded data and last id of tender to get next page of data from this tender
+                new_last_obj_id = df['ObjectId'].iloc[-1]
+                new_last_num = df['id'].iloc[-1]
+
+                if new_last_num == last_num:
+                    print("ending loop")
+                    break
+                else:
+                    last_num = new_last_num
+                    last_obj_id = new_last_obj_id
+                    print(last_obj_id, last_num)
+
+
+                """if db:
+                    df = making_dataframe(db)
+                    # Convert publicationDate to datetime
+                    df['publicationDate'] = pd.to_datetime(df['publicationDate'])
+                    df.to_csv('output.csv', index=False, sep=";")  # in Europe here so ";" instead of ","
+                    last_obj_id = df['ObjectId'].iloc[-1]
+                    last_num = df['id'].iloc[-1]
+                    print(last_obj_id, last_num)
+                else:
+                    print("breaking loop")
+                    break"""
+
+            # Convert publicationDate from eZam DB to datetime
+            df['publicationDate'] = pd.to_datetime(df['publicationDate'])
+            # Exporting dataframe to csv file
+            df.to_csv('output.csv', index=False, sep=";")  # in Europe here so ";" instead of ","
         else:
             print("db empty at first run")
     else:
@@ -103,4 +142,3 @@ def main(start_day_str, end_day_str, code):
 
 if __name__ == '__main__':
     main(date1, date2, cpv)
-
