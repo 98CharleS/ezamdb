@@ -1,7 +1,6 @@
 import pandas as pd
 from validations import validations
 from extract import extract
-from db_transform import appending_deals
 from date_transform import transforming_to_datetime
 from datetime import datetime
 
@@ -19,6 +18,44 @@ def making_dataframe(dataframe):
         return x
     except ValueError:
         return None
+
+
+tenders = []
+
+
+def appending_deals(database, id_n=1):
+    # id_n for numering tenders
+    # changing raw data to json type
+    if database:
+        database = database.json()
+
+        def getting_deals(x):  # script to return valves from the deal obj
+
+            return {
+                "id": x,
+                "ObjectId": deal.get("objectId"),
+                "tenderId": deal.get("tenderId"),
+                "noticeNumber": deal.get("noticeNumber"),
+                "bzpNumber": deal.get("bzpNumber"),
+                "orderObject": deal.get("orderObject"),
+                "orderType": deal.get("orderType"),
+                "cpvCode": deal.get("cpvCode"),
+                "publicationDate": deal.get("publicationDate"),
+                "submittingOffersDate": deal.get("submittingOffersDate"),
+                "organizationName": deal.get("organizationName"),
+                "organizationCity": deal.get("organizationCity"),
+                "organizationCountry": deal.get("organizationCountry"),
+                "isBelowEUThreshold": deal.get("isTenderAmountBelowEU"),
+                "Result": deal.get("procedureResult")
+            }
+
+        for deal in database:  # making a list of deals then return info
+            tenders.append(getting_deals(id_n))
+            id_n = id_n + 1
+        return tenders
+    else:
+        print("Error at appending tenders")
+
 
 def making_link(day_from: datetime, day_to: datetime, cpv, last_id=None):
     # Format datetimes directly into the API format
@@ -58,8 +95,8 @@ def taking_data():
     return sday, lday, cpvs
 
 
-date1 = "03.02.2024"  # for future adjustment make it entered by user
-date2 = "05.02.2024"
+date1 = "01.01.2023"  # for future adjustment make it entered by user
+date2 = "01.01.2025"
 cpv = "all"  # 44212200-1 / all
 
 
@@ -89,17 +126,20 @@ def main(start_day_str, end_day_str, code):
             last_obj_id = df['ObjectId'].iloc[-1]
             last_num = df['id'].iloc[-1]
             print(last_obj_id, last_num)
-
+            print("entering loop")
+            repeat = 0
             while True:
                 # loop which will go on as long as downloaded list of data is not empty
                 # used to get all pages form eZam DB
-                print("entering loop")
+                repeat = repeat + 1
+                print(f"loop #{repeat}")
 
                 # making link to connect to eZam BD and download data after last_obj_id
                 link = making_link(start_date, end_date, code, last_obj_id)
                 print(link)
 
-                db = appending_deals(extract(link), last_num)  # extracting data from eZam DB and appending it into list
+                # extracting data from eZam DB and appending it into list
+                db = appending_deals(extract(link), last_num + 1)
 
                 print("next df")
                 # Create a DataFrame
@@ -130,14 +170,16 @@ def main(start_day_str, end_day_str, code):
                     print("breaking loop")
                     break"""
 
-            # Convert publicationDate from eZam DB to datetime
-            df['publicationDate'] = pd.to_datetime(df['publicationDate'])
+            """# Convert publicationDate from eZam DB to datetime
+            df['publicationDate'] = pd.to_datetime(df['publicationDate'])"""
             # Exporting dataframe to csv file
             df.to_csv('output.csv', index=False, sep=";")  # in Europe here so ";" instead of ","
         else:
             print("db empty at first run")
     else:
         print("Error at validation stage")
+    print("that's all")
+
 
 
 if __name__ == '__main__':
