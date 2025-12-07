@@ -138,16 +138,23 @@ def main(start_day_str, end_day_str, code):
                 link = making_link(start_date, end_date, code, last_obj_id)
                 print(link)
 
-                # extracting data from eZam DB and appending it into list
-                db = appending_deals(extract(link), last_num + 1)
+                try:   # extracting data from eZam DB and appending it into list
+                    db = appending_deals(extract(link), last_num + 1)
 
-                print("next df")
-                # Create a DataFrame
-                df = making_dataframe(db)  # creating dataframe with pandas to read data from web
+                    print("next df")
+                    # Create a DataFrame
+                    df = making_dataframe(db)  # creating dataframe with pandas to read data from web
 
-                # picking last num from downloaded data and last id of tender to get next page of data from this tender
-                new_last_obj_id = df['ObjectId'].iloc[-1]
-                new_last_num = df['id'].iloc[-1]
+                    # picking last num from downloaded data and last id of tender
+                    # to get next page of data from this tender
+                    new_last_obj_id = df['ObjectId'].iloc[-1]
+                    new_last_num = df['id'].iloc[-1]
+                except KeyError:
+                    print(f"! emergency breaking loop !"
+                          f"KEY ERROR"
+                          f"breaking at {last_num} {last_obj_id}"
+                          f"{link}")
+                    break
 
                 if new_last_num == last_num:
                     print("ending loop")
